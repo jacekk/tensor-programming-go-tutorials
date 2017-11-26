@@ -3,3 +3,5 @@
 !hello-world/**
 !static-file-server/
 !static-file-server/**
+!web-crawler/
+!web-crawler/**
