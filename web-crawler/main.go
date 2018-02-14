@@ -4,27 +4,32 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"strings"
+
+	log "github.com/llimllib/loglevel"
 	"golang.org/x/net/html"
 	"golang.org/x/net/html/atom"
-	"strings"
-	log "github.com/llimllib/loglevel"
 )
 
+// MaxDepth ...
 var MaxDepth = 2
 
-type link struct {
-	url string
-	text string
+// Link ...
+type Link struct {
+	url   string
+	text  string
 	depth int
 }
 
-type HttpError struct {
+// HTTPError ...
+type HTTPError struct {
 	original string
 }
 
-func LinkReader(res *http.Response, depth int) []link {
+// LinkReader ...
+func LinkReader(res *http.Response, depth int) []Link {
 	page := html.NewTokenizer(res.Body)
-	links := []link{}
+	links := []Link{}
 
 	var start *html.Token
 	var tokenData string
@@ -69,10 +74,11 @@ func LinkReader(res *http.Response, depth int) []link {
 	return links
 }
 
-func NewLink(tag html.Token, text string, depth int) link {
-	link := link{text: strings.TrimSpace(text), depth: depth}
+// NewLink ...
+func NewLink(tag html.Token, text string, depth int) Link {
+	link := Link{text: strings.TrimSpace(text), depth: depth}
 
-	for	i:= range tag.Attr {
+	for i := range tag.Attr {
 		if tag.Attr[i].Key == "href" {
 			link.url = strings.TrimSpace(tag.Attr[i].Val)
 		}
@@ -81,31 +87,31 @@ func NewLink(tag html.Token, text string, depth int) link {
 	return link
 }
 
-func (self link) String() string {
-	spacer := strings.Repeat("\t", self.depth)
-	formatted := fmt.Sprintf("%s%s (%d) - %s", spacer, self.text, self.depth, self.url)
+func (link Link) String() string {
+	spacer := strings.Repeat("\t", link.depth)
+	formatted := fmt.Sprintf("%s%s (%d) - %s", spacer, link.text, link.depth, link.url)
 
 	return formatted
 }
 
-func (self link) isValid() bool {
-	if self.depth >= MaxDepth {
+func (link Link) isValid() bool {
+	if link.depth >= MaxDepth {
 		return false
 	}
 
-	if len(self.text) == 0 {
+	if len(link.text) == 0 {
 		return false
 	}
 
-	if len(self.url) == 0 || strings.Contains(strings.ToLower(self.url), "javascript") {
+	if len(link.url) == 0 || strings.Contains(strings.ToLower(link.url), "javascript") {
 		return false
 	}
 
 	return true
 }
 
-func (self HttpError) Error() string {
-	return self.original
+func (error HTTPError) Error() string {
+	return error.original
 }
 
 func recurDownloader(url string, depth int) {
@@ -136,7 +142,7 @@ func downloader(url string) (resp *http.Response, err error) {
 	}
 
 	if resp.StatusCode > 299 {
-		err = HttpError{ fmt.Sprintf("Error (%d): %s", resp.StatusCode, url) }
+		err = HTTPError{fmt.Sprintf("Error (%d): %s", resp.StatusCode, url)}
 		log.Debug(err)
 		return
 	}
